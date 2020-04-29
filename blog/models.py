@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericRelation
 from ckeditor_uploader.fields import RichTextUploadingField
-from read_statistic.models import ReadNumExpandMethod
+from read_statistic.models import ReadNumExpandMethod, ReadDetail
 
 
 # Create your models here.
@@ -20,34 +21,12 @@ class Blog(models.Model, ReadNumExpandMethod):
     blog_type = models.ForeignKey(BlogType, on_delete=models.DO_NOTHING)
     content = RichTextUploadingField()
     author = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    read_details = GenericRelation(ReadDetail)
     created_time = models.DateTimeField(auto_now_add=True)
     last_updated_time = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return "<Blog: %s>" % self.title
 
-    # 方法一
-    # def get_read_num(self):
-    #     try:
-    #         return self.readnum.read_num
-    #     except exceptions.ObjectDoesNotExist:
-    #         return 0
-
-    '''
-    # 方法二
-    def get_read_num(self):
-        try:
-            ct = ContentType.objects.get_for_model(Blog)
-            readnum = ReadNum.objects.get(content_type=ct, object_id=self.pk)
-            return readnum.read_num
-        except exceptions.ObjectDoesNotExist:
-            return 0
-    '''
-
     class Meta:
         ordering = ['-created_time']
-
-# 一对一
-# class ReadNum(models.Model):
-#     read_num = models.IntegerField(default=0)
-#     blog = models.OneToOneField(Blog, on_delete=models.DO_NOTHING)
