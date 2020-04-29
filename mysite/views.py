@@ -1,6 +1,7 @@
-from django.shortcuts import render_to_response
+from django.shortcuts import render, redirect
 from django.core.cache import cache
 from django.contrib.contenttypes.fields import ContentType
+from django.contrib import auth
 from read_statistic.utils import get_seven_days_read_data, get_today_hot_data, get_yesterday_hot_data, \
     get_seven_days_hot_blogs
 from blog.models import Blog
@@ -16,7 +17,6 @@ def home(request):
         seven_days_hot_blogs = get_seven_days_hot_blogs(content_type=blog_content_type)
         cache.set('seven_days_hot_blogs', seven_days_hot_blogs, 3600)
 
-
     # 获取今天热门博客的缓存数据
     today_hot_data = get_today_hot_data(content_type=blog_content_type)
 
@@ -27,4 +27,15 @@ def home(request):
     context['today_hot_data'] = today_hot_data
     context['yesterday_hot_data'] = yesterday_hot_data
     context['seven_days_hot_blogs'] = seven_days_hot_blogs
-    return render_to_response('home.html', context)
+    return render(request, 'home.html', context)
+
+
+def login(request):
+    username = request.POST.get('username', '')
+    password = request.POST.get('password', '')
+    user = auth.authenticate(request, username=username, password=password)
+    if user is not None:
+        auth.login(request, user)
+        return redirect('/')
+    else:
+        return render(request, 'error.html', {'message': '用户名或密码不正确'})
