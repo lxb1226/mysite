@@ -129,6 +129,31 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # 配置ckeditor
 CKEDITOR_UPLOAD_PATH = 'upload/'
 
+CKEDITOR_CONFIGS = {
+    'comment_ckeditor': {
+        'toolbar': 'custom',  # put selected toolbar config here
+        # 'toolbarGroups': [{ 'name': 'document', 'groups': [ 'mode', 'document', 'doctools' ] }],
+        # 'height': 291,
+        # 'width': '100%',
+        # 'filebrowserWindowHeight': 725,
+        # 'filebrowserWindowWidth': 940,
+        # 'toolbarCanCollapse': True,
+        # 'mathJaxLib': '//cdn.mathjax.org/mathjax/2.2-latest/MathJax.js?config=TeX-AMS_HTML',
+        'toolbar_custom': [
+            ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'SuperScript'],
+            ['TextColor', 'BGColor', 'RemoveFormat'],
+            ['NumberedList', 'BulletedList'],
+            ['Link', 'Unlink'],
+            ['Smiley', 'SpecialChar', 'Blockquote'],
+        ],
+        'width': 'auto',
+        'height': '180',
+        'tabSpaces':4,
+        'removePlugins': 'elementspath',
+        'resize_enabled': False,
+    }
+}
+
 # 自定义参数
 EACH_PAGE_BLOGS_NUMBER = 7
 
