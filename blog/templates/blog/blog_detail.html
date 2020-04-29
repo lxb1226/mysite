@@ -52,6 +52,12 @@
                               style="overflow: hidden">
 
                             <label>{{ user.username }},欢迎评论</label>
+                            <div id="reply_content_container" style="display: none;">
+                                <p>回复：</p>
+                                <div id="reply_content">
+
+                                </div>
+                            </div>
                             {% csrf_token %}
                             {% for field in comment_form %}
                                 {{ field }}
@@ -70,13 +76,33 @@
                 <div class="comment-area">
                     <h3 class="comment-area-title">评论列表</h3>
                     {% for comment in comments %}
-                        <div id="comment_list">
-                            {{ comment.user.username }}
-                            ({{ comment.comment_time|date:'Y-m-d h:i:s' }})
-                            :{{ comment.text|safe }}
+                        <div id="root_{{ comment.pk }}" class="comment">
+                            <span>{{ comment.user.username }}</span>
+                            <span>({{ comment.comment_time|date:'Y-m-d h:i:s' }}):
+</span>
+                            <div id="comment_{{ comment.pk }}">
+                                {{ comment.text|safe }}
+                            </div>
+
+                            <a href="javascript:reply({{ comment.pk }});">回复</a>
+
+                            {% for reply in comment.root_comment.all %}
+                                <div class="reply">
+                                    <span>{{ reply.user.username }}</span>
+                                    <span>({{ reply.comment_time|date:'Y-m-d h:i:s' }})</span>
+                                    <span>回复</span>
+                                    <span>{{ reply.reply_to.username }}:</span>
+
+                                    <div id="comment_{{ reply.pk }}">
+                                        {{ reply.text|safe }}
+                                    </div>
+                                    <a href="javascript:reply({{ reply.pk }});">回复</a>
+                                </div>
+
+                            {% endfor %}
                         </div>
                     {% empty %}
-                        暂无评论
+                        <span id="no_comment">暂无评论</span>
                     {% endfor %}
 
                 </div>
@@ -92,7 +118,7 @@
         $("#comment_form").submit(function () {
             // 判断是否为空
             $("#comment_error").text('');
-            if(CKEDITOR.instances['id_text'].document.getBody().getText().trim() == ''){
+            if (CKEDITOR.instances['id_text'].document.getBody().getText().trim() === '') {
                 $("#comment_error").text('评论内容不能为空');
                 return false;
             }
@@ -106,12 +132,38 @@
                 cache: false,
                 success: function (data) {
                     // 插入数据
-                    if (data['status'] == 'SUCCESS') {
-                        var comment_html = '<div>' + data['username'] + '(' + data['comment_time'] + ')' + data['text'] + '</div>';
-                        $("#comment_list").prepend(comment_html);
+                    if (data['status'] === 'SUCCESS') {
+                        if ($("#reply_comment_id").val() == '0') {
+                            // 插入评论
+                            var comment_html = ' <div id="' + data['pk'] + '" class="comment">\n' +
+                                '                            <span>' + data['username'] + '</span>\n' +
+                                '                            <span>(' + data['comment_time'] + '):\n' +
+                                '</span>\n' +
+                                '                            <div id="comment_' + data['pk'] + '">\n' +
+                                +data['text'] +
+                                '                            </div><a href="javascript:reply(' + data['pk'] + ');">回复</a>';
+                            $("#comment_list").prepend(comment_html);
+                        } else {
+                            // 插入回复
+                            var reply_html = '<div class="reply">\n' +
+                                '                                    <span>' + data['username'] + '</span>\n' +
+                                '                                    <span>(' + data['comment_time'] + ')</span>\n' +
+                                '                                    <span>回复</span>\n' +
+                                '                                    <span>' + data['reply_to'] + ':</span>\n' +
+                                '                                    \n' +
+                                '                                    <div id="comment_' + data['pk'] + '">\n' +
+                                data['text'] +
+                                '                                    </div>\n' +
+                                '                                    <a href="javascript:reply(' + data['pk'] + ');">回复</a>\n' +
+                                '                                </div>';
+
+                            $("#root_" + data['root_pk']).append(reply_html);
+
+                        }
+
                         // 清空编辑框的内容
-                        CKEDITOR.instances.setData('');
-                    }else{
+                        CKEDITOR.instances['id_text'].setData('');
+                    } else {
                         $("#comment_error").text(data['message']);
                     }
 
@@ -122,6 +174,18 @@
             });
             return false;
         });
+
+        function reply(reply_comment_id) {
+            // 设置值
+            $("#reply_comment_id").val(reply_comment_id);
+            var html = $("#comment_" + reply_comment_id).html();
+            $("#reply_content").html(html);
+            $("#reply_content_container").show();
+            $("html").animate({scrollTop: $('#comment_form').offset().top - 60}, 300, function () {
+                CKEDITOR.instances['id_text'].focus();
+            });
+        }
+
     </script>
 {% endblock %}
 
