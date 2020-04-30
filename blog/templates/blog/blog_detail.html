@@ -5,6 +5,7 @@
 {% load staticfiles %}
 # 加载模板文件
 {% load comment_tags %}
+{% load likes_tags %}
 {% block header_extends %}
     <link rel="stylesheet" href="{% static 'blog/css/blog.css' %}">
     <script type="text/javascript" src="{% static "ckeditor/ckeditor-init.js" %}"></script>
@@ -25,6 +26,12 @@
                     <li>评论({% get_comment_count blog %})</li>
                 </ul>
                 <div class="blog-content">{{ blog.content|safe }}</div>
+                <div class="like" onclick="likeChange(this,'{% get_content_type blog %}', '{{ blog.pk }}')">
+                    <span class="glyphicon glyphicon-thumbs-up {% get_like_status blog %}"></span>
+                    <span class="liked_num">{% get_like_count blog %}</span>
+                    <span>喜欢</span>
+
+                </div>
                 <div class="blog-more">
                     <p>上一篇：
                         {% if previous_blog %}
@@ -81,6 +88,13 @@
                                 <div id="comment_{{ comment.pk }}">
                                     {{ comment.text|safe }}
                                 </div>
+                                <div class="like"
+                                     onclick="likeChange(this,'{% get_content_type comment %}', '{{ comment.pk }}')">
+                                    <span class="glyphicon glyphicon-thumbs-up {% get_like_status comment %}"></span>
+                                    <span class="liked_num">{% get_like_count comment %}</span>
+
+
+                                </div>
                                 <a href="javascript:reply({{ comment.pk }});">回复</a>
 
 
@@ -88,6 +102,13 @@
                                     <div class="reply">
                                         <span>{{ reply.user.username }}</span>
                                         <span>({{ reply.comment_time|date:"Y-m-d H:i:s" }})</span>
+                                        <div class="like"
+                                             onclick="likeChange(this,'{% get_content_type reply %}', '{{ reply.pk }}')">
+                                            <span class="glyphicon glyphicon-thumbs-up {% get_like_status reply %}"></span>
+                                            <span class="liked_num">{% get_like_count reply %}</span>
+
+
+                                        </div>
                                         <span>回复</span>
                                         <span>{{ reply.reply_to.username }}：</span>
                                         <div id="comment_{{ reply.pk }}">
@@ -109,6 +130,40 @@
 
 {% block script_extends %}
     <script type="text/javascript">
+
+        function likeChange(obj, content_type, object_id) {
+            var is_like = obj.getElementsByClassName('active').length == 0;
+            $.ajax({
+                url: "{% url 'like_change'  %}",
+                type: 'GET',
+                data: {
+                    content_type: content_type,
+                    object_id: object_id,
+                    is_like: is_like
+                },
+                cache: false,
+                success: function (data) {
+                    console.log(data);
+                    if (data['status'] == 'SUCCESS') {
+                        // 更新点赞状态
+                        var element = $(obj.getElementsByClassName("glyphicon"));
+                        if (is_like) {
+                            element.addClass('active');
+                        } else {
+                            element.removeClass('active');
+                        }
+                        // 更新点赞数量
+                        var liked_num = $(obj.getElementsByClassName("liked_num"));
+                        liked_num.text(data['liked_num']);
+                    } else {
+                        alert(data['message']);
+                    }
+                },
+                error: function (xhr) {
+                    console.log(xhr)
+                }
+            })
+        }
 
         function numFormat(num) {
             return ('00' + num).substr(-2);
