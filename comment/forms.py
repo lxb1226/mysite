@@ -46,7 +46,7 @@ class CommentForm(forms.Form):
         elif reply_comment_id == 0:
             self.cleaned_data['parent'] = None
         elif Comment.objects.filter(pk=reply_comment_id).exists():
-            self.changed_data['parent'] = Comment.objects.get(pk=reply_comment_id)
+            self.cleaned_data['parent'] = Comment.objects.get(pk=reply_comment_id)
         else:
             raise forms.ValidationError('回复出错')
         return reply_comment_id
