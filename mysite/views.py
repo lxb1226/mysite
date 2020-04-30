@@ -1,13 +1,28 @@
+import datetime
 from django.shortcuts import render, redirect
+from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
+from django.db.models import Sum
 from django.core.cache import cache
-from django.contrib.contenttypes.fields import ContentType
 from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls import reverse
-from read_statistic.utils import get_seven_days_read_data, get_today_hot_data, get_yesterday_hot_data, \
-    get_seven_days_hot_blogs
+from django.http import JsonResponse
+
+from read_statistic.utils import get_seven_days_read_data, get_today_hot_data, get_yesterday_hot_data
 from blog.models import Blog
 from .forms import LoginForm, RegForm
+
+
+def get_7_days_hot_blogs():
+    today = timezone.now().date()
+    date = today - datetime.timedelta(days=7)
+    blogs = Blog.objects \
+        .filter(read_details__date__lt=today, read_details__date__gte=date) \
+        .values('id', 'title') \
+        .annotate(read_num_sum=Sum('read_details__read_num')) \
+        .order_by('-read_num_sum')
+    return blogs[:7]
 
 
 def home(request):
@@ -15,26 +30,22 @@ def home(request):
     dates, read_nums = get_seven_days_read_data(blog_content_type)
 
     # 获取7天热门博客的缓存数据
-    seven_days_hot_blogs = cache.get('seven_days_hot_blogs')
-    if seven_days_hot_blogs is None:
-        seven_days_hot_blogs = get_seven_days_hot_blogs(content_type=blog_content_type)
-        cache.set('seven_days_hot_blogs', seven_days_hot_blogs, 3600)
+    hot_blogs_for_7_days = cache.get('hot_blogs_for_7_days')
+    if hot_blogs_for_7_days is None:
+        hot_blogs_for_7_days = get_7_days_hot_blogs()
+        cache.set('hot_blogs_for_7_days', hot_blogs_for_7_days, 3600)
 
-    # 获取今天热门博客的缓存数据
-    today_hot_data = get_today_hot_data(content_type=blog_content_type)
-
-    yesterday_hot_data = get_yesterday_hot_data(content_type=blog_content_type)
     context = {}
-    context['read_nums'] = read_nums
     context['dates'] = dates
-    context['today_hot_data'] = today_hot_data
-    context['yesterday_hot_data'] = yesterday_hot_data
-    context['seven_days_hot_blogs'] = seven_days_hot_blogs
+    context['read_nums'] = read_nums
+    context['today_hot_data'] = get_today_hot_data(blog_content_type)
+    context['yesterday_hot_data'] = get_yesterday_hot_data(blog_content_type)
+    context['hot_blogs_for_7_days'] = hot_blogs_for_7_days
     return render(request, 'home.html', context)
 
 
 def login(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         login_form = LoginForm(request.POST)
         if login_form.is_valid():
             user = login_form.cleaned_data['user']
@@ -48,8 +59,20 @@ def login(request):
     return render(request, 'login.html', context)
 
 
+def login_for_medal(request):
+    login_form = LoginForm(request.POST)
+    data = {}
+    if login_form.is_valid():
+        user = login_form.cleaned_data['user']
+        auth.login(request, user)
+        data['status'] = 'SUCCESS'
+    else:
+        data['status'] = 'ERROR'
+    return JsonResponse(data)
+
+
 def register(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         reg_form = RegForm(request.POST)
         if reg_form.is_valid():
             username = reg_form.cleaned_data['username']
@@ -58,12 +81,10 @@ def register(request):
             # 创建用户
             user = User.objects.create_user(username, email, password)
             user.save()
-
             # 登录用户
             user = auth.authenticate(username=username, password=password)
             auth.login(request, user)
             return redirect(request.GET.get('from', reverse('home')))
-
     else:
         reg_form = RegForm()
 

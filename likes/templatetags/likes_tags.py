@@ -2,7 +2,6 @@ from django import template
 from django.contrib.contenttypes.models import ContentType
 from ..models import LikeCount, LikeRecord
 
-# 注册
 register = template.Library()
 
 
@@ -20,6 +19,12 @@ def get_like_status(context, obj):
     if not user.is_authenticated:
         return ''
     if LikeRecord.objects.filter(content_type=content_type, object_id=obj.pk, user=user).exists():
-        return "active"
+        return 'active'
     else:
         return ''
+
+
+@register.simple_tag
+def get_content_type(obj):
+    content_type = ContentType.objects.get_for_model(obj)
+    return content_type.model
