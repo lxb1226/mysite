@@ -47,7 +47,9 @@
                            aria-expanded="false">{{ user.username }} <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'user_info' %}">个人资料</a></li>
-
+                            {% if user.is_staff or user.is_superuser %}
+                            <li><a href="{% url 'admin:index' %}">后台管理</a></li>
+                            {% endif %}
                             <li><a href="{% url 'logout' %}?from={{ request.get_full_path }}">登出</a></li>
                         </ul>
                     </li>
